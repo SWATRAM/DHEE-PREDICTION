@@ -341,29 +341,31 @@
             generateGraph();
         });
         
-        // --- REVISED: Graph Generation Logic ---
+        // --- REVISED AND CORRECTED: Graph Generation Logic ---
         async function generateGraph() {
-            graphContainer.innerHTML = '';
+            graphContainer.innerHTML = ''; // Clear previous graph
 
-            // 1. Get the total number of submissions
-            const statsDoc = await db.collection('metadata').doc('stats').get();
-            const totalSubmissions = statsDoc.exists ? statsDoc.data().totalSubmissions : 0;
-
-            // 2. Get the prediction counts for each contestant
+            // 1. Get the prediction counts for each contestant
             const predictionsSnapshot = await db.collection('predictions').get();
             let predictionData = {};
+            let totalVotes = 0; // This will be the SUM of all votes
+
             predictionsSnapshot.forEach(doc => {
-                predictionData[doc.id] = doc.data().count;
+                const contestantName = doc.id;
+                const voteCount = doc.data().count;
+                predictionData[contestantName] = voteCount;
+                // Add this contestant's votes to the total
+                totalVotes += voteCount;
             });
             
-            // 3. Sort contestants by vote count
+            // 2. Sort contestants by their vote count (highest first)
             const sortedContestants = Object.keys(predictionData).sort((a,b) => predictionData[b] - predictionData[a]);
 
-            // 4. Calculate and display the graph
+            // 3. Calculate and display the graph
             sortedContestants.forEach(name => {
                 const count = predictionData[name];
-                // NEW: Percentage is based on total submissions
-                const percentage = totalSubmissions > 0 ? Math.round((count / totalSubmissions) * 100) : 0;
+                // CORRECTED: Percentage is based on the total number of votes cast
+                const percentage = totalVotes > 0 ? Math.round((count / totalVotes) * 100) : 0;
                 const barHtml = `<div class="graph-bar"><div class="graph-label">${name}</div><div class="bar-container"><div class="bar" style="width: ${percentage}%;">${percentage}%</div></div></div>`;
                 graphContainer.innerHTML += barHtml;
             });
