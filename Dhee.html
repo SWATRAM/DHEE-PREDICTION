@@ -253,7 +253,7 @@
             const card = document.createElement('div');
             card.id = `contestant-${index}`;
             card.className = 'picture-card';
-            card.draggable = true; // For desktop
+            card.draggable = true;
             card.innerText = name;
             card.style.backgroundImage = `url(${name.toLowerCase()}.jpeg)`;
             pictureStack.appendChild(card);
@@ -271,14 +271,9 @@
         const dropZones = document.querySelectorAll('.drop-zone');
 
         // --- Desktop Drag-and-Drop Logic ---
-        let draggedItem = null;
-        let sourceContainer = null;
+        let draggedItem = null, sourceContainer = null;
         draggableItems.forEach(item => {
-            item.addEventListener('dragstart', e => {
-                draggedItem = e.target;
-                sourceContainer = e.target.parentElement;
-                setTimeout(() => e.target.classList.add('dragging'), 0);
-            });
+            item.addEventListener('dragstart', e => { draggedItem = e.target; sourceContainer = e.target.parentElement; setTimeout(() => e.target.classList.add('dragging'), 0); });
             item.addEventListener('dragend', e => e.target.classList.remove('dragging'));
         });
         dropZones.forEach(zone => {
@@ -293,71 +288,31 @@
             });
         });
 
-        // --- NEW: Touch Event Handlers for Mobile Dragging ---
-        let touchDraggedItem = null;
-        let lastTouchTarget = null;
-
+        // --- Mobile Touch Logic ---
+        let touchDraggedItem = null, lastTouchTarget = null;
         draggableItems.forEach(item => {
-            item.addEventListener('touchstart', e => {
-                touchDraggedItem = e.target;
-                sourceContainer = e.target.parentElement;
-                touchDraggedItem.classList.add('dragging');
-            });
-
+            item.addEventListener('touchstart', e => { touchDraggedItem = e.target; sourceContainer = e.target.parentElement; touchDraggedItem.classList.add('dragging'); });
             item.addEventListener('touchmove', e => {
                 if (!touchDraggedItem) return;
-                // Prevent screen scrolling while dragging
                 e.preventDefault();
-
                 const touch = e.targetTouches[0];
                 const elementUnderTouch = document.elementFromPoint(touch.clientX, touch.clientY);
-                
-                if (lastTouchTarget) {
-                    lastTouchTarget.classList.remove('drag-over');
-                }
-                
-                if (elementUnderTouch && (elementUnderTouch.classList.contains('drop-box') || elementUnderTouch.id === 'picture-stack')) {
-                    elementUnderTouch.classList.add('drag-over');
-                    lastTouchTarget = elementUnderTouch;
-                } else if (elementUnderTouch && elementUnderTouch.classList.contains('picture-card')) {
-                    // If hovering over another card, highlight its container box
-                    const parentBox = elementUnderTouch.parentElement;
-                    if(parentBox.classList.contains('drop-box')){
-                         parentBox.classList.add('drag-over');
-                         lastTouchTarget = parentBox;
-                    }
-                }
+                if (lastTouchTarget) lastTouchTarget.classList.remove('drag-over');
+                if (elementUnderTouch && (elementUnderTouch.classList.contains('drop-box') || elementUnderTouch.id === 'picture-stack')) { elementUnderTouch.classList.add('drag-over'); lastTouchTarget = elementUnderTouch; }
+                else if (elementUnderTouch && elementUnderTouch.classList.contains('picture-card')) { const parentBox = elementUnderTouch.parentElement; if(parentBox.classList.contains('drop-box')){ parentBox.classList.add('drag-over'); lastTouchTarget = parentBox; } }
             });
-
             item.addEventListener('touchend', e => {
-                if (!touchDraggedItem || !lastTouchTarget) {
-                    if(touchDraggedItem) touchDraggedItem.classList.remove('dragging');
-                    return;
-                }
-                
+                if (!touchDraggedItem || !lastTouchTarget) { if(touchDraggedItem) touchDraggedItem.classList.remove('dragging'); return; }
                 lastTouchTarget.classList.remove('drag-over');
                 const target = lastTouchTarget;
-
-                // Logic to place the card
-                if (target.classList.contains('drop-box') && !target.hasChildNodes()) {
-                    target.appendChild(touchDraggedItem);
-                } else if (target.classList.contains('drop-box') && target.hasChildNodes()) {
-                    // Swap logic for touch
-                    const existingCard = target.firstChild;
-                    sourceContainer.appendChild(existingCard);
-                    target.appendChild(touchDraggedItem);
-                } else if (target.id === 'picture-stack') {
-                    target.appendChild(touchDraggedItem);
-                }
-                
-                touchDraggedItem.classList.remove('dragging');
-                touchDraggedItem = null;
-                lastTouchTarget = null;
+                if (target.classList.contains('drop-box') && !target.hasChildNodes()) { target.appendChild(touchDraggedItem); }
+                else if (target.classList.contains('drop-box') && target.hasChildNodes()) { const existingCard = target.firstChild; sourceContainer.appendChild(existingCard); target.appendChild(touchDraggedItem); }
+                else if (target.id === 'picture-stack') { target.appendChild(touchDraggedItem); }
+                touchDraggedItem.classList.remove('dragging'); touchDraggedItem = null; lastTouchTarget = null;
             });
         });
 
-
-        // --- Lock In Predictions Logic ---
+        // --- REVISED: Lock In Predictions Logic ---
         lockButton.addEventListener('click', () => {
             const superSixPicks = [];
             superSixGrid.querySelectorAll('.drop-box').forEach(box => {
@@ -365,17 +320,19 @@
             });
             if (superSixPicks.length === 0) { alert("Please make at least one prediction!"); return; }
 
-            // Submit predictions to Firebase
+            // 1. Increment the vote count for each selected contestant
             superSixPicks.forEach(name => {
                 const docRef = db.collection('predictions').doc(name);
-                docRef.update({
-                    count: firebase.firestore.FieldValue.increment(1)
-                }).catch(() => {
-                    docRef.set({ count: 1 });
-                });
+                docRef.update({ count: firebase.firestore.FieldValue.increment(1) })
+                    .catch(() => docRef.set({ count: 1 }));
             });
             
-            // Disable game and show results
+            // 2. NEW: Increment the total number of submissions
+            const statsRef = db.collection('metadata').doc('stats');
+            statsRef.update({ totalSubmissions: firebase.firestore.FieldValue.increment(1) })
+                .catch(() => statsRef.set({ totalSubmissions: 1 }));
+            
+            // 3. Disable game and show results
             draggableItems.forEach(item => { item.draggable = false; item.style.cursor = 'not-allowed'; });
             gameBoard.style.display = 'none';
             pictureStack.style.display = 'none';
@@ -384,23 +341,29 @@
             generateGraph();
         });
         
-        // --- Graph Generation Logic ---
+        // --- REVISED: Graph Generation Logic ---
         async function generateGraph() {
             graphContainer.innerHTML = '';
-            const snapshot = await db.collection('predictions').get();
-            let predictionData = {};
-            let totalVotes = 0;
 
-            snapshot.forEach(doc => {
+            // 1. Get the total number of submissions
+            const statsDoc = await db.collection('metadata').doc('stats').get();
+            const totalSubmissions = statsDoc.exists ? statsDoc.data().totalSubmissions : 0;
+
+            // 2. Get the prediction counts for each contestant
+            const predictionsSnapshot = await db.collection('predictions').get();
+            let predictionData = {};
+            predictionsSnapshot.forEach(doc => {
                 predictionData[doc.id] = doc.data().count;
             });
-            for (const name in predictionData) {
-                totalVotes += predictionData[name];
-            }
+            
+            // 3. Sort contestants by vote count
             const sortedContestants = Object.keys(predictionData).sort((a,b) => predictionData[b] - predictionData[a]);
+
+            // 4. Calculate and display the graph
             sortedContestants.forEach(name => {
                 const count = predictionData[name];
-                const percentage = totalVotes > 0 ? Math.round((count / totalVotes) * 100) : 0;
+                // NEW: Percentage is based on total submissions
+                const percentage = totalSubmissions > 0 ? Math.round((count / totalSubmissions) * 100) : 0;
                 const barHtml = `<div class="graph-bar"><div class="graph-label">${name}</div><div class="bar-container"><div class="bar" style="width: ${percentage}%;">${percentage}%</div></div></div>`;
                 graphContainer.innerHTML += barHtml;
             });
