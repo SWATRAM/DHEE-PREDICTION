@@ -205,124 +205,190 @@
     </div>
 
     <script>
-        // --- Firebase Initialization ---
-        // PASTE YOUR FIREBASE CONFIGURATION OBJECT HERE
-        const firebaseConfig = {
-            apiKey: "AIzaSyBuGvHQqkpL_BWiIhDSCZzgBmt2dnvBvoQ",
-            authDomain: "super-6-7857b.firebaseapp.com",
-            projectId: "super-6-7857b",
-            storageBucket: "super-6-7857b.firebasestorage.app",
-            messagingSenderId: "309012647170",
-            appId: "1:309012647170:web:8c04317b7a6a993c7f461b"
-        };
+    // --- Firebase Initialization ---
+    // PASTE YOUR FIREBASE CONFIGURATION OBJECT HERE
+    const firebaseConfig = {
+        apiKey: "AIzaSyBuGvHQqkpL_BWiIhDSCZzgBmt2dnvBvoQ",
+        authDomain: "super-6-7857b.firebaseapp.com",
+        projectId: "super-6-7857b",
+        storageBucket: "super-6-7857b.firebasestorage.app",
+        messagingSenderId: "309012647170",
+        appId: "1:309012647170:web:8c04317b7a6a993c7f461b"
+    };
 
-        // Initialize Firebase
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore(); // Get a reference to the Firestore database
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
 
-        document.addEventListener('DOMContentLoaded', () => {
-            const pictureStack = document.getElementById('picture-stack');
-            const superSixGrid = document.getElementById('super-six');
-            const bottomFiveGrid = document.getElementById('bottom-five');
-            const lockButton = document.getElementById('lock-button');
-            const gameBoard = document.getElementById('game-board');
-            const resultsContainer = document.getElementById('results-container');
-            const graphContainer = document.getElementById('graph');
+    document.addEventListener('DOMContentLoaded', () => {
+        const pictureStack = document.getElementById('picture-stack');
+        const superSixGrid = document.getElementById('super-six');
+        const bottomFiveGrid = document.getElementById('bottom-five');
+        const lockButton = document.getElementById('lock-button');
+        const gameBoard = document.getElementById('game-board');
+        const resultsContainer = document.getElementById('results-container');
+        const graphContainer = document.getElementById('graph');
 
-            const contestants = ['raju','abhi','pandu','jatin','jhansi','janu','sushmitha','anshu','rajnandini','bhoomika','manikanta'];
+        const contestants = ['raju','abhi','pandu','jatin','jhansi','janu','sushmitha','anshu','rajnandini','bhoomika','manikanta'];
 
-            contestants.forEach((name, index) => {
-                const card = document.createElement('div');
-                card.id = `contestant-${index}`;
-                card.className = 'picture-card';
-                card.draggable = true;
-                card.innerText = name;
-                // This line looks for .jpg files. Make sure your images have this extension!
-                card.style.backgroundImage = `url(${name.toLowerCase()}.jpeg)`;
-                pictureStack.appendChild(card);
-            });
-            
-            for(let i = 1; i <= 11; i++) {
-                const box = document.createElement('div');
-                box.className = 'drop-box drop-zone';
-                box.dataset.rank = i;
-                if (i <= 6) { superSixGrid.appendChild(box); } else { bottomFiveGrid.appendChild(box); }
-            }
-            
-            let draggedItem = null, sourceContainer = null;
-            document.querySelectorAll('.picture-card').forEach(item => {
-                item.addEventListener('dragstart', e => { draggedItem = e.target; sourceContainer = e.target.parentElement; setTimeout(() => e.target.classList.add('dragging'), 0); });
-                item.addEventListener('dragend', e => e.target.classList.remove('dragging'));
-            });
-            document.querySelectorAll('.drop-zone').forEach(zone => {
-                zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
-                zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
-                zone.addEventListener('drop', e => {
-                    e.preventDefault(); zone.classList.remove('drag-over');
-                    const target = e.target;
-                    if (target.classList.contains('drop-box') && !target.hasChildNodes()) target.appendChild(draggedItem);
-                    else if (target.classList.contains('picture-card')) { const tc = target.parentElement; sourceContainer.appendChild(target); tc.appendChild(draggedItem); }
-                    else if (target.id === 'picture-stack' && e.target.id === 'picture-stack') target.appendChild(draggedItem);
-                });
-            });
-
-            // --- Lock In Predictions Logic ---
-            lockButton.addEventListener('click', () => {
-                const superSixPicks = [];
-                superSixGrid.querySelectorAll('.drop-box').forEach(box => {
-                    if (box.firstChild) superSixPicks.push(box.firstChild.innerText);
-                });
-
-                if (superSixPicks.length === 0) { alert("Please make at least one prediction!"); return; }
-
-                // 1. Submit predictions to Firebase
-                superSixPicks.forEach(name => {
-                    const docRef = db.collection('predictions').doc(name);
-                    docRef.update({
-                        count: firebase.firestore.FieldValue.increment(1)
-                    }).catch(() => {
-                        // If the document doesn't exist, create it
-                        docRef.set({ count: 1 });
-                    });
-                });
-                
-                // 2. Disable game and show results
-                document.querySelectorAll('.picture-card').forEach(item => { item.draggable = false; item.style.cursor = 'not-allowed'; });
-                gameBoard.style.display = 'none';
-                pictureStack.style.display = 'none';
-                resultsContainer.style.display = 'block';
-
-                // 3. Generate graph with REAL data from Firebase
-                generateGraph();
-            });
-            
-            // --- Graph Generation with REAL Data ---
-            async function generateGraph() {
-                graphContainer.innerHTML = ''; // Clear previous graph
-                const snapshot = await db.collection('predictions').get();
-                
-                let predictionData = {};
-                let totalVotes = 0;
-
-                snapshot.forEach(doc => {
-                    predictionData[doc.id] = doc.data().count;
-                });
-                
-                // Calculate total votes after gathering all counts
-                for (const name in predictionData) {
-                    totalVotes += predictionData[name];
-                }
-
-                const sortedContestants = Object.keys(predictionData).sort((a,b) => predictionData[b] - predictionData[a]);
-
-                sortedContestants.forEach(name => {
-                    const count = predictionData[name];
-                    const percentage = totalVotes > 0 ? Math.round((count / totalVotes) * 100) : 0;
-                    const barHtml = `<div class="graph-bar"><div class="graph-label">${name}</div><div class="bar-container"><div class="bar" style="width: ${percentage}%;">${percentage}%</div></div></div>`;
-                    graphContainer.innerHTML += barHtml;
-                });
-            }
+        // Create and place the picture cards
+        contestants.forEach((name, index) => {
+            const card = document.createElement('div');
+            card.id = `contestant-${index}`;
+            card.className = 'picture-card';
+            card.draggable = true; // For desktop
+            card.innerText = name;
+            card.style.backgroundImage = `url(${name.toLowerCase()}.jpeg)`;
+            pictureStack.appendChild(card);
         });
-    </script>
+        
+        // Create the drop boxes
+        for(let i = 1; i <= 11; i++) {
+            const box = document.createElement('div');
+            box.className = 'drop-box drop-zone';
+            box.dataset.rank = i;
+            if (i <= 6) { superSixGrid.appendChild(box); } else { bottomFiveGrid.appendChild(box); }
+        }
+        
+        const draggableItems = document.querySelectorAll('.picture-card');
+        const dropZones = document.querySelectorAll('.drop-zone');
+
+        // --- Desktop Drag-and-Drop Logic ---
+        let draggedItem = null;
+        let sourceContainer = null;
+        draggableItems.forEach(item => {
+            item.addEventListener('dragstart', e => {
+                draggedItem = e.target;
+                sourceContainer = e.target.parentElement;
+                setTimeout(() => e.target.classList.add('dragging'), 0);
+            });
+            item.addEventListener('dragend', e => e.target.classList.remove('dragging'));
+        });
+        dropZones.forEach(zone => {
+            zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
+            zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+            zone.addEventListener('drop', e => {
+                e.preventDefault(); zone.classList.remove('drag-over');
+                const target = e.target;
+                if (target.classList.contains('drop-box') && !target.hasChildNodes()) target.appendChild(draggedItem);
+                else if (target.classList.contains('picture-card')) { const tc = target.parentElement; sourceContainer.appendChild(target); tc.appendChild(draggedItem); }
+                else if (target.id === 'picture-stack' && e.target.id === 'picture-stack') target.appendChild(draggedItem);
+            });
+        });
+
+        // --- NEW: Touch Event Handlers for Mobile Dragging ---
+        let touchDraggedItem = null;
+        let lastTouchTarget = null;
+
+        draggableItems.forEach(item => {
+            item.addEventListener('touchstart', e => {
+                touchDraggedItem = e.target;
+                sourceContainer = e.target.parentElement;
+                touchDraggedItem.classList.add('dragging');
+            });
+
+            item.addEventListener('touchmove', e => {
+                if (!touchDraggedItem) return;
+                // Prevent screen scrolling while dragging
+                e.preventDefault();
+
+                const touch = e.targetTouches[0];
+                const elementUnderTouch = document.elementFromPoint(touch.clientX, touch.clientY);
+                
+                if (lastTouchTarget) {
+                    lastTouchTarget.classList.remove('drag-over');
+                }
+                
+                if (elementUnderTouch && (elementUnderTouch.classList.contains('drop-box') || elementUnderTouch.id === 'picture-stack')) {
+                    elementUnderTouch.classList.add('drag-over');
+                    lastTouchTarget = elementUnderTouch;
+                } else if (elementUnderTouch && elementUnderTouch.classList.contains('picture-card')) {
+                    // If hovering over another card, highlight its container box
+                    const parentBox = elementUnderTouch.parentElement;
+                    if(parentBox.classList.contains('drop-box')){
+                         parentBox.classList.add('drag-over');
+                         lastTouchTarget = parentBox;
+                    }
+                }
+            });
+
+            item.addEventListener('touchend', e => {
+                if (!touchDraggedItem || !lastTouchTarget) {
+                    if(touchDraggedItem) touchDraggedItem.classList.remove('dragging');
+                    return;
+                }
+                
+                lastTouchTarget.classList.remove('drag-over');
+                const target = lastTouchTarget;
+
+                // Logic to place the card
+                if (target.classList.contains('drop-box') && !target.hasChildNodes()) {
+                    target.appendChild(touchDraggedItem);
+                } else if (target.classList.contains('drop-box') && target.hasChildNodes()) {
+                    // Swap logic for touch
+                    const existingCard = target.firstChild;
+                    sourceContainer.appendChild(existingCard);
+                    target.appendChild(touchDraggedItem);
+                } else if (target.id === 'picture-stack') {
+                    target.appendChild(touchDraggedItem);
+                }
+                
+                touchDraggedItem.classList.remove('dragging');
+                touchDraggedItem = null;
+                lastTouchTarget = null;
+            });
+        });
+
+
+        // --- Lock In Predictions Logic ---
+        lockButton.addEventListener('click', () => {
+            const superSixPicks = [];
+            superSixGrid.querySelectorAll('.drop-box').forEach(box => {
+                if (box.firstChild) superSixPicks.push(box.firstChild.innerText);
+            });
+            if (superSixPicks.length === 0) { alert("Please make at least one prediction!"); return; }
+
+            // Submit predictions to Firebase
+            superSixPicks.forEach(name => {
+                const docRef = db.collection('predictions').doc(name);
+                docRef.update({
+                    count: firebase.firestore.FieldValue.increment(1)
+                }).catch(() => {
+                    docRef.set({ count: 1 });
+                });
+            });
+            
+            // Disable game and show results
+            draggableItems.forEach(item => { item.draggable = false; item.style.cursor = 'not-allowed'; });
+            gameBoard.style.display = 'none';
+            pictureStack.style.display = 'none';
+            resultsContainer.style.display = 'block';
+            
+            generateGraph();
+        });
+        
+        // --- Graph Generation Logic ---
+        async function generateGraph() {
+            graphContainer.innerHTML = '';
+            const snapshot = await db.collection('predictions').get();
+            let predictionData = {};
+            let totalVotes = 0;
+
+            snapshot.forEach(doc => {
+                predictionData[doc.id] = doc.data().count;
+            });
+            for (const name in predictionData) {
+                totalVotes += predictionData[name];
+            }
+            const sortedContestants = Object.keys(predictionData).sort((a,b) => predictionData[b] - predictionData[a]);
+            sortedContestants.forEach(name => {
+                const count = predictionData[name];
+                const percentage = totalVotes > 0 ? Math.round((count / totalVotes) * 100) : 0;
+                const barHtml = `<div class="graph-bar"><div class="graph-label">${name}</div><div class="bar-container"><div class="bar" style="width: ${percentage}%;">${percentage}%</div></div></div>`;
+                graphContainer.innerHTML += barHtml;
+            });
+        }
+    });
+</script>
 </body>
 </html>
