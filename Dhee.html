@@ -342,42 +342,47 @@
         });
         
         // --- REVISED AND CORRECTED: Graph Generation Logic ---
-       async function generateGraph() {
-            graphContainer.innerHTML = '';
-            console.log("--- Starting Graph Generation ---");
+     function generateGraph() {
+            graphContainer.innerHTML = ''; // Clear the graph area
+            console.log("--- Setting up real-time listener for graph data ---");
 
-            const predictionsSnapshot = await db.collection('predictions').get();
-            let predictionData = {};
-            let totalVotes = 0;
+            // NEW: Use onSnapshot for a live connection instead of get()
+            db.collection('predictions').onSnapshot(predictionsSnapshot => {
+                
+                let predictionData = {};
+                let totalVotes = 0;
 
-            // This loop reads your database
-            predictionsSnapshot.forEach(doc => {
-                predictionData[doc.id] = doc.data().count;
+                console.log("Fresh data received from Firestore:");
+                
+                predictionsSnapshot.forEach(doc => {
+                    predictionData[doc.id] = doc.data().count;
+                });
+
+                // Display the raw data in a table to confirm it's correct
+                console.table(predictionData);
+
+                // Calculate total votes from the fresh data
+                for (const name in predictionData) {
+                    totalVotes += predictionData[name];
+                }
+
+                console.log("Final Total Votes Calculated:", totalVotes);
+
+                const sortedContestants = Object.keys(predictionData).sort((a,b) => predictionData[b] - predictionData[a]);
+
+                // We must rebuild the graph HTML from scratch each time data updates
+                let graphHtml = '';
+                sortedContestants.forEach(name => {
+                    const count = predictionData[name];
+                    const percentage = totalVotes > 0 ? Math.round((count / totalVotes) * 100) : 0;
+                    console.log(`> For ${name}: (${count} / ${totalVotes}) * 100 = ${percentage}%`);
+                    graphHtml += `<div class="graph-bar"><div class="graph-label">${name}</div><div class="bar-container"><div class="bar" style="width: ${percentage}%;">${percentage}%</div></div></div>`;
+                });
+                
+                // Update the graph on the page
+                graphContainer.innerHTML = graphHtml;
+                console.log("--- Graph Updated ---");
             });
-            
-            // --- NEW DEBUGGING STEP ---
-            // This will show us the exact data the code is about to use.
-            console.log("Data read from Firestore:");
-            console.table(predictionData);
-
-            // This loop calculates the total based on the data above
-            for (const name in predictionData) {
-                totalVotes += predictionData[name];
-            }
-            
-            console.log("Final Total Votes Calculated:", totalVotes);
-            console.log("------------------------------------");
-
-            const sortedContestants = Object.keys(predictionData).sort((a,b) => predictionData[b] - predictionData[a]);
-
-            sortedContestants.forEach(name => {
-                const count = predictionData[name];
-                const percentage = totalVotes > 0 ? Math.round((count / totalVotes) * 100) : 0;
-                console.log(`> For ${name}: (${count} / ${totalVotes}) * 100 = ${percentage}%`);
-                const barHtml = `<div class="graph-bar"><div class="graph-label">${name}</div><div class="bar-container"><div class="bar" style="width: ${percentage}%;">${percentage}%</div></div></div>`;
-                graphContainer.innerHTML += barHtml;
-            });
-            console.log("--- Graph Generation Complete ---");
         }
     });
 </script>
