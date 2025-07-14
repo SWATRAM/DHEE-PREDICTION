@@ -9,186 +9,203 @@
     <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-firestore-compat.js"></script>
 
    <style>
-        /* --- Basic Setup --- */
+    /* --- Basic Setup & Mobile First Design --- */
+    body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        background-color: #f0f2f5;
+        color: #333;
+        display: flex;
+        /* Mobile: Stack elements vertically */
+        flex-direction: column;
+        align-items: center;
+        padding: 10px;
+        gap: 20px;
+    }
+
+    /* --- Picture Stack (Mobile: Horizontal Scroll) --- */
+    #picture-stack {
+        order: 2; /* Show stack below the game board on mobile */
+        display: flex;
+        flex-direction: row; /* Lay out cards horizontally */
+        width: 100%;
+        height: auto;
+        padding: 10px;
+        overflow-x: auto; /* Allow horizontal scrolling */
+        background-color: #fff;
+        border: 2px dashed #b0b0b0;
+        border-radius: 10px;
+        box-sizing: border-box;
+    }
+
+    /* --- Draggable Picture Cards --- */
+    .picture-card {
+        width: 120px;
+        height: 120px;
+        flex-shrink: 0; /* Prevent cards from shrinking */
+        background-color: #e0e0e0;
+        border: 2px solid #ccc;
+        border-radius: 8px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-weight: bold;
+        font-size: 14px;
+        cursor: grab;
+        user-select: none;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        background-size: cover;
+        background-position: center;
+        color: white;
+        text-shadow: 1px 1px 3px black;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        margin-right: 10px; /* Spacing for horizontal layout */
+    }
+
+    .picture-card.dragging {
+        cursor: grabbing;
+        opacity: 0.5;
+        box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+    }
+
+    /* --- Game Board --- */
+    #game-board {
+        order: 1; /* Show game board first on mobile */
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        align-items: center;
+        width: 100%;
+    }
+    
+    .grid-container {
+        display: grid;
+        /* Mobile: Use 2 columns to fit the screen */
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+        padding: 10px;
+        background-color: #ffffff;
+        border-radius: 10px;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    
+    h2 {
+        margin: 0 0 10px 0;
+        text-align: center;
+        color: #1a237e;
+    }
+
+    /* --- Drop Boxes --- */
+    .drop-box {
+        width: 100%;
+        height: 0;
+        padding-bottom: 100%; /* Maintain square aspect ratio */
+        position: relative;
+        background-color: #e8eaf6;
+        border: 2px dashed #9fa8da;
+        border-radius: 8px;
+        box-sizing: border-box;
+    }
+
+    /* Use absolute positioning to center card inside the responsive box */
+    .drop-box .picture-card {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        margin: 0;
+    }
+    
+    .drop-box::before {
+        content: attr(data-rank);
+        position: absolute;
+        top: 5px;
+        left: 8px;
+        font-size: 16px;
+        font-weight: bold;
+        color: #7986cb;
+        z-index: 1;
+    }
+    
+    .drop-box.drag-over {
+        background-color: #c5cae9;
+        border-color: #3f51b5;
+    }
+    
+    #lock-button {
+        padding: 12px 25px;
+        font-size: 16px;
+        font-weight: bold;
+        color: white;
+        background-color: #28a745;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: background-color 0.2s;
+        margin-top: 10px;
+    }
+
+    /* --- Styles for the graph --- */
+    #results-container {
+        width: 100%;
+        max-width: 500px;
+        background: #fff;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        text-align: center;
+        box-sizing: border-box;
+    }
+    
+    .graph-bar { display: flex; align-items: center; margin-bottom: 10px; font-size: 14px; }
+    .graph-label { width: 80px; text-align: right; padding-right: 10px; font-weight: bold; }
+    .bar-container { flex-grow: 1; background-color: #e8eaf6; border-radius: 5px; overflow: hidden; }
+    .bar { height: 25px; background-color: #3f51b5; color: white; display: flex; align-items: center; justify-content: flex-end; padding-right: 8px; border-radius: 5px; font-size: 12px; font-weight: bold; transition: width 0.5s ease-in-out; }
+
+
+    /* --- For Desktop (Wider Screens) --- */
+    @media (min-width: 800px) {
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: #f0f2f5;
-            color: #333;
-            display: flex;
-            justify-content: center;
+            /* Switch back to horizontal layout */
+            flex-direction: row;
             align-items: flex-start;
             padding: 20px;
             gap: 30px;
         }
 
-        /* --- Picture Stack (Left Corner) --- */
         #picture-stack {
+            order: 1; /* Put stack back on the left */
+            flex-direction: column; /* Switch to vertical stack */
             width: 150px;
             height: 600px;
-            border: 2px dashed #b0b0b0;
-            border-radius: 10px;
-            padding: 10px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            background-color: #fff;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+            overflow-x: visible;
         }
 
-        /* --- Draggable Picture Cards --- */
-        .picture-card {
-            width: 120px;
-            height: 120px;
-            background-color: #e0e0e0;
-            border: 2px solid #ccc;
-            border-radius: 8px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-weight: bold;
-            font-size: 14px;
-            cursor: grab;
-            user-select: none;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            background-size: cover;
-            background-position: center;
-            color: white;
-            text-shadow: 1px 1px 3px black;
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
-        }
-        
+        /* Restore overlapping card effect for desktop */
         #picture-stack .picture-card:not(:first-child) {
             margin-top: -105px;
         }
-        
-        .picture-card:hover {
-            transform: scale(1.05);
-            z-index: 10;
+        .picture-card {
+             margin-right: 0;
         }
 
-        .picture-card.dragging {
-            cursor: grabbing;
-            opacity: 0.5;
-            box-shadow: 0 8px 16px rgba(0,0,0,0.2);
-        }
-
-        /* --- Game Board (Center) --- */
         #game-board {
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-            align-items: center;
-        }
-        
-        .grid-container {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 15px;
-            padding: 15px;
-            background-color: #ffffff;
-            border-radius: 10px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-        }
-        
-        h2 {
-            margin: 0;
-            text-align: center;
-            color: #1a237e;
-            margin-bottom: 10px;
+            order: 2;
         }
 
-        /* --- Drop Boxes --- */
+        .grid-container {
+            /* Restore 3-column grid */
+            grid-template-columns: repeat(3, 1fr);
+        }
+        
         .drop-box {
+            /* Restore fixed size for desktop */
             width: 130px;
             height: 130px;
-            background-color: #e8eaf6;
-            border: 2px dashed #9fa8da;
-            border-radius: 8px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            position: relative;
-            transition: background-color 0.3s, border-color 0.3s;
+            padding-bottom: 0;
         }
-        
-        .drop-box::before {
-            content: attr(data-rank);
-            position: absolute;
-            top: 5px;
-            left: 8px;
-            font-size: 16px;
-            font-weight: bold;
-            color: #7986cb;
-        }
-        
-        .drop-box.drag-over {
-            background-color: #c5cae9;
-            border-color: #3f51b5;
-        }
-        
-        #lock-button {
-            padding: 12px 25px;
-            font-size: 16px;
-            font-weight: bold;
-            color: white;
-            background-color: #28a745;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: background-color 0.2s;
-            margin-top: 10px;
-        }
-        
-        #lock-button:hover {
-            background-color: #218838;
-        }
-        
-        /* --- Styles for the graph --- */
-        #results-container {
-            width: 100%;
-            max-width: 500px;
-            background: #fff;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-            text-align: center;
-        }
-        
-        .graph-bar {
-            display: flex;
-            align-items: center;
-            margin-bottom: 10px;
-            font-size: 14px;
-        }
-        
-        .graph-label {
-            width: 80px;
-            text-align: right;
-            padding-right: 10px;
-            font-weight: bold;
-        }
-        
-        .bar-container {
-            flex-grow: 1;
-            background-color: #e8eaf6;
-            border-radius: 5px;
-            overflow: hidden;
-        }
-        
-        .bar {
-            height: 25px;
-            background-color: #3f51b5;
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: flex-end;
-            padding-right: 8px;
-            border-radius: 5px;
-            font-size: 12px;
-            font-weight: bold;
-            transition: width 0.5s ease-in-out;
-        }
-    </style>
+    }
+</style>
 </head>
 <body>
     <div id="picture-stack" class="drop-zone"></div>
