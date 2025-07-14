@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Predictor's Panel</title>
+    <style>
+        /* --- Basic Setup --- */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f0f2f5;
+            color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 20px;
+            gap: 30px;
+        }
+
+        /* --- Picture Stack (Left Corner) --- */
+        #picture-stack {
+            width: 150px;
+            height: 600px;
+            border: 2px dashed #b0b0b0;
+            border-radius: 10px;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #fff;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+        }
+
+        /* --- Draggable Picture Cards --- */
+        .picture-card {
+            width: 120px;
+            height: 120px;
+            background-color: #e0e0e0;
+            border: 2px solid #ccc;
+            border-radius: 8px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            font-size: 14px;
+            cursor: grab;
+            user-select: none;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            background-size: cover;
+            background-position: center;
+            color: white;
+            text-shadow: 1px 1px 3px black;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        
+        /* Make the cards in the stack overlap */
+        #picture-stack .picture-card:not(:first-child) {
+            margin-top: -105px;
+        }
+        
+        .picture-card:hover {
+            transform: scale(1.05);
+            z-index: 10;
+        }
+
+        .picture-card.dragging {
+            cursor: grabbing;
+            opacity: 0.5;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+        }
+
+        /* --- Game Board (Center) --- */
+        #game-board {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            align-items: center;
+        }
+        
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            padding: 15px;
+            background-color: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        
+        h2 {
+            margin: 0;
+            text-align: center;
+            color: #1a237e;
+        }
+
+        /* --- Drop Boxes --- */
+        .drop-box {
+            width: 130px;
+            height: 130px;
+            background-color: #e8eaf6;
+            border: 2px dashed #9fa8da;
+            border-radius: 8px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            transition: background-color 0.3s, border-color 0.3s;
+        }
+        
+        .drop-box::before {
+            content: attr(data-rank);
+            position: absolute;
+            top: 5px;
+            left: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            color: #7986cb;
+        }
+
+        /* Highlight effect when dragging over a box */
+        .drop-box.drag-over {
+            background-color: #c5cae9;
+            border-color: #3f51b5;
+        }
+        
+        #lock-button {
+            padding: 12px 25px;
+            font-size: 16px;
+            font-weight: bold;
+            color: white;
+            background-color: #28a745;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            margin-top: 10px;
+        }
+        
+        #lock-button:hover {
+            background-color: #218838;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div id="picture-stack" class="drop-zone">
+        </div>
+
+    <div id="game-board">
+        <div class="panel">
+            <h2>🏆 Super Six</h2>
+            <div id="super-six" class="grid-container">
+                </div>
+        </div>
+        <div class="panel">
+            <h2>🔻 Bottom Six</h2>
+            <div id="bottom-six" class="grid-container">
+                </div>
+        </div>
+        <button id="lock-button">Lock In Predictions</button>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const pictureStack = document.getElementById('picture-stack');
+            const superSixGrid = document.getElementById('super-six');
+            const bottomSixGrid = document.getElementById('bottom-six');
+            
+            const contestants = [
+                'Raju', 'Abhi', 'Pandu', 'Sanket', 'Jatin', 'Jhansi',
+                'Janu', 'Sushmitha', 'Anshu', 'Rajnandini', 'Bhoomika', 'Manikanta'
+            ];
+            
+            // --- Create and Place Picture Cards ---
+            contestants.forEach((name, index) => {
+                const card = document.createElement('div');
+                card.id = `contestant-${index}`;
+                card.className = 'picture-card';
+                card.draggable = true;
+                card.innerText = name;
+                // Use placeholder images for visual effect
+                //card.style.backgroundImage = `url(https://picsum.photos/seed/${name}/120/120)`;
+		card.style.backgroundImage = `url(images/${name.toLowerCase()}.jpg)`;
+                pictureStack.appendChild(card);
+            });
+            
+            // --- Create Drop Boxes ---
+            for(let i = 1; i <= 12; i++) {
+                const box = document.createElement('div');
+                box.className = 'drop-box drop-zone';
+                box.dataset.rank = i; // Set rank number
+                if (i <= 6) {
+                    superSixGrid.appendChild(box);
+                } else {
+                    bottomSixGrid.appendChild(box);
+                }
+            }
+
+            // --- Drag and Drop Logic ---
+            const draggableItems = document.querySelectorAll('.picture-card');
+            const dropZones = document.querySelectorAll('.drop-zone');
+            
+            let draggedItem = null;
+            let sourceContainer = null;
+
+            draggableItems.forEach(item => {
+                item.addEventListener('dragstart', (e) => {
+                    draggedItem = e.target;
+                    sourceContainer = e.target.parentElement;
+                    setTimeout(() => {
+                        e.target.classList.add('dragging');
+                    }, 0);
+                });
+
+                item.addEventListener('dragend', (e) => {
+                    e.target.classList.remove('dragging');
+                });
+            });
+
+            dropZones.forEach(zone => {
+                zone.addEventListener('dragover', (e) => {
+                    e.preventDefault(); // Necessary to allow dropping
+                    zone.classList.add('drag-over');
+                });
+
+                zone.addEventListener('dragleave', () => {
+                    zone.classList.remove('drag-over');
+                });
+
+                zone.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    zone.classList.remove('drag-over');
+                    
+                    const target = e.target;
+                    
+                    // Case 1: Dropping a card onto an empty drop-box
+                    if (target.classList.contains('drop-box') && !target.hasChildNodes()) {
+                        target.appendChild(draggedItem);
+                    } 
+                    // Case 2: Dropping a card onto another card (swap them)
+                    else if (target.classList.contains('picture-card')) {
+                        const targetContainer = target.parentElement;
+                        // Move the existing card to the source container
+                        sourceContainer.appendChild(target);
+                        // Move the dragged card to the target's container
+                        targetContainer.appendChild(draggedItem);
+                    }
+                    // Case 3: Dropping a card back into the main stack
+                    else if (target.id === 'picture-stack') {
+                        // Check if the target is the stack itself and not a card inside it
+                         if (e.target.id === 'picture-stack') {
+                            target.appendChild(draggedItem);
+                         }
+                    }
+                });
+            });
+        });
+
+    </script>
+</body>
+</html>
