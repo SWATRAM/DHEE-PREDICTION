@@ -154,8 +154,8 @@
                 </div>
         </div>
         <div class="panel">
-            <h2>🔻 Bottom Six</h2>
-            <div id="bottom-six" class="grid-container">
+            <h2>🔻 Bottom Five</h2>
+            <div id="bottom-five" class="grid-container">
                 </div>
         </div>
         <button id="lock-button">Lock In Predictions</button>
@@ -165,12 +165,13 @@
         document.addEventListener('DOMContentLoaded', () => {
             const pictureStack = document.getElementById('picture-stack');
             const superSixGrid = document.getElementById('super-six');
-            const bottomSixGrid = document.getElementById('bottom-six');
+            const bottomFiveGrid = document.getElementById('bottom-five');
             
-            const contestants = [
-                'Raju', 'Abhi', 'Pandu', 'Sanket', 'Jatin', 'Jhansi',
+            // --- REVISED: Now 11 contestants ---
+		const contestants = [
+                'Raju', 'Abhi', 'Pandu', 'Jatin', 'Jhansi',
                 'Janu', 'Sushmitha', 'Anshu', 'Rajnandini', 'Bhoomika', 'Manikanta'
-            ];
+            ];            
             
             // --- Create and Place Picture Cards ---
             contestants.forEach((name, index) => {
@@ -179,25 +180,24 @@
                 card.className = 'picture-card';
                 card.draggable = true;
                 card.innerText = name;
-                // Use placeholder images for visual effect
                 //card.style.backgroundImage = `url(https://picsum.photos/seed/${name}/120/120)`;
-		card.style.backgroundImage = `url(${name.toLowerCase()}.jpg)`;
-                pictureStack.appendChild(card);
+                card.style.backgroundImage = `url(i${name.toLowerCase()}.jpeg)`;
+		pictureStack.appendChild(card);
             });
             
-            // --- Create Drop Boxes ---
-            for(let i = 1; i <= 12; i++) {
+            // --- REVISED: Create 11 Drop Boxes ---
+            for(let i = 1; i <= 11; i++) {
                 const box = document.createElement('div');
                 box.className = 'drop-box drop-zone';
                 box.dataset.rank = i; // Set rank number
                 if (i <= 6) {
                     superSixGrid.appendChild(box);
                 } else {
-                    bottomSixGrid.appendChild(box);
+                    bottomFiveGrid.appendChild(box);
                 }
             }
 
-            // --- Drag and Drop Logic ---
+            // --- Drag and Drop Logic (no changes needed here) ---
             const draggableItems = document.querySelectorAll('.picture-card');
             const dropZones = document.querySelectorAll('.drop-zone');
             
@@ -220,7 +220,7 @@
 
             dropZones.forEach(zone => {
                 zone.addEventListener('dragover', (e) => {
-                    e.preventDefault(); // Necessary to allow dropping
+                    e.preventDefault(); 
                     zone.classList.add('drag-over');
                 });
 
@@ -234,21 +234,15 @@
                     
                     const target = e.target;
                     
-                    // Case 1: Dropping a card onto an empty drop-box
                     if (target.classList.contains('drop-box') && !target.hasChildNodes()) {
                         target.appendChild(draggedItem);
                     } 
-                    // Case 2: Dropping a card onto another card (swap them)
                     else if (target.classList.contains('picture-card')) {
                         const targetContainer = target.parentElement;
-                        // Move the existing card to the source container
                         sourceContainer.appendChild(target);
-                        // Move the dragged card to the target's container
                         targetContainer.appendChild(draggedItem);
                     }
-                    // Case 3: Dropping a card back into the main stack
                     else if (target.id === 'picture-stack') {
-                        // Check if the target is the stack itself and not a card inside it
                          if (e.target.id === 'picture-stack') {
                             target.appendChild(draggedItem);
                          }
