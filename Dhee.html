@@ -9,7 +9,185 @@
     <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-firestore-compat.js"></script>
 
     <style>
-        body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background-color:#f0f2f5;color:#333;display:flex;justify-content:center;align-items:flex-start;padding:20px;gap:30px}#picture-stack{width:150px;height:600px;border:2px dashed #b0b0b0;border-radius:10px;padding:10px;display:flex;flex-direction:column;align-items:center;background-color:#fff;box-shadow:0 4px 8px rgba(0,0,0,.05)}.picture-card{width:120px;height:120px;background-color:#e0e0e0;border:2px solid #ccc;border-radius:8px;display:flex;justify-content:center;align-items:center;font-weight:700;font-size:14px;cursor:grab;-webkit-user-select:none;user-select:none;box-shadow:0 2px 4px rgba(0,0,0,.1);background-size:cover;background-position:center;color:#fff;text-shadow:1px 1px 3px #000;transition:transform .2s ease,box-shadow .2s ease}#picture-stack .picture-card:not(:first-child){margin-top:-105px}.picture-card:hover{transform:scale(1.05);z-index:10}.picture-card.dragging{cursor:grabbing;opacity:.5;box-shadow:0 8px 16px rgba(0,0,0,.2)}#game-board{display:flex;flex-direction:column;gap:20px;align-items:center}.grid-container{display:grid;grid-template-columns:repeat(3,1fr);gap:15px;padding:15px;background-color:#fff;border-radius:10px;box-shadow:0 4px 8px rgba(0,0,0,.1)}h2{margin:0;text-align:center;color:#1a237e}.drop-box{width:130px;height:130px;background-color:#e8eaf6;border:2px dashed #9fa8da;border-radius:8px;display:flex;justify-content:center;align-items:center;position:relative;transition:background-color .3s,border-color .3s}.drop-box::before{content:attr(data-rank);position:absolute;top:5px;left:8px;font-size:16px;font-weight:700;color:#7986cb}.drop-box.drag-over{background-color:#c5cae9;border-color:#3f51b5}#lock-button{padding:12px 25px;font-size:16px;font-weight:700;color:#fff;background-color:#28a745;border:none;border-radius:5px;cursor:pointer;transition:background-color .2s;margin-top:10px}#lock-button:hover{background-color:#218838}#results-container{width:100%;max-width:500px;background:#fff;padding:20px;border-radius:10px;box-shadow:0 4px 12px rgba(0,0,0,.1);text-align:center}.graph-bar{display:flex;align-items:center;margin-bottom:10px;font-size:14px}.graph-label{width:80px;text-align:right;padding-right:10px;font-weight:700}.bar-container{flex-grow:1;background-color:#e8eaf6;border-radius:5px;overflow:hidden}.bar{height:25px;background-color:#3f51b5;color:#fff;display:flex;align-items:center;justify-content:flex-end;padding-right:8px;border-radius:5px;font-size:12px;font-weight:700;transition:width .5s ease-in-out}
+        /* --- Basic Setup --- */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f0f2f5;
+            color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 20px;
+            gap: 30px;
+        }
+
+        /* --- Picture Stack (Left Corner) --- */
+        #picture-stack {
+            width: 150px;
+            height: 600px;
+            border: 2px dashed #b0b0b0;
+            border-radius: 10px;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #fff;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+        }
+
+        /* --- Draggable Picture Cards --- */
+        .picture-card {
+            width: 120px;
+            height: 120px;
+            background-color: #e0e0e0;
+            border: 2px solid #ccc;
+            border-radius: 8px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            font-size: 14px;
+            cursor: grab;
+            user-select: none;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            background-size: cover;
+            background-position: center;
+            color: white;
+            text-shadow: 1px 1px 3px black;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        
+        #picture-stack .picture-card:not(:first-child) {
+            margin-top: -105px;
+        }
+        
+        .picture-card:hover {
+            transform: scale(1.05);
+            z-index: 10;
+        }
+
+        .picture-card.dragging {
+            cursor: grabbing;
+            opacity: 0.5;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+        }
+
+        /* --- Game Board (Center) --- */
+        #game-board {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            align-items: center;
+        }
+        
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            padding: 15px;
+            background-color: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        
+        h2 {
+            margin: 0;
+            text-align: center;
+            color: #1a237e;
+            margin-bottom: 10px;
+        }
+
+        /* --- Drop Boxes --- */
+        .drop-box {
+            width: 130px;
+            height: 130px;
+            background-color: #e8eaf6;
+            border: 2px dashed #9fa8da;
+            border-radius: 8px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            transition: background-color 0.3s, border-color 0.3s;
+        }
+        
+        .drop-box::before {
+            content: attr(data-rank);
+            position: absolute;
+            top: 5px;
+            left: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            color: #7986cb;
+        }
+        
+        .drop-box.drag-over {
+            background-color: #c5cae9;
+            border-color: #3f51b5;
+        }
+        
+        #lock-button {
+            padding: 12px 25px;
+            font-size: 16px;
+            font-weight: bold;
+            color: white;
+            background-color: #28a745;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            margin-top: 10px;
+        }
+        
+        #lock-button:hover {
+            background-color: #218838;
+        }
+        
+        /* --- Styles for the graph --- */
+        #results-container {
+            width: 100%;
+            max-width: 500px;
+            background: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        
+        .graph-bar {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+        
+        .graph-label {
+            width: 80px;
+            text-align: right;
+            padding-right: 10px;
+            font-weight: bold;
+        }
+        
+        .bar-container {
+            flex-grow: 1;
+            background-color: #e8eaf6;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+        
+        .bar {
+            height: 25px;
+            background-color: #3f51b5;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-right: 8px;
+            border-radius: 5px;
+            font-size: 12px;
+            font-weight: bold;
+            transition: width 0.5s ease-in-out;
+        }
     </style>
 </head>
 <body>
@@ -27,12 +205,12 @@
     </div>
 
     <script>
-        // --- NEW: Firebase Initialization ---
+        // --- Firebase Initialization ---
         // PASTE YOUR FIREBASE CONFIGURATION OBJECT HERE
         const firebaseConfig = {
             apiKey: "AIzaSyBuGvHQqkpL_BWiIhDSCZzgBmt2dnvBvoQ",
             authDomain: "super-6-7857b.firebaseapp.com",
-            projectId: "super-6-7857bD",
+            projectId: "super-6-7857b",
             storageBucket: "super-6-7857b.firebasestorage.app",
             messagingSenderId: "309012647170",
             appId: "1:309012647170:web:8c04317b7a6a993c7f461b"
@@ -59,7 +237,8 @@
                 card.className = 'picture-card';
                 card.draggable = true;
                 card.innerText = name;
-                card.style.backgroundImage = `url(${name.toLowerCase()}.jpeg)`;
+                // This line looks for .jpg files. Make sure your images have this extension!
+                card.style.backgroundImage = `url(${name.toLowerCase()}.jpg)`;
                 pictureStack.appendChild(card);
             });
             
@@ -87,7 +266,7 @@
                 });
             });
 
-            // --- REVISED: Lock In Predictions Logic ---
+            // --- Lock In Predictions Logic ---
             lockButton.addEventListener('click', () => {
                 const superSixPicks = [];
                 superSixGrid.querySelectorAll('.drop-box').forEach(box => {
@@ -117,10 +296,33 @@
                 generateGraph();
             });
             
-            // --- REVISED: Graph Generation with REAL Data ---
+            // --- Graph Generation with REAL Data ---
             async function generateGraph() {
                 graphContainer.innerHTML = ''; // Clear previous graph
                 const snapshot = await db.collection('predictions').get();
                 
                 let predictionData = {};
-                let total
+                let totalVotes = 0;
+
+                snapshot.forEach(doc => {
+                    predictionData[doc.id] = doc.data().count;
+                });
+                
+                // Calculate total votes after gathering all counts
+                for (const name in predictionData) {
+                    totalVotes += predictionData[name];
+                }
+
+                const sortedContestants = Object.keys(predictionData).sort((a,b) => predictionData[b] - predictionData[a]);
+
+                sortedContestants.forEach(name => {
+                    const count = predictionData[name];
+                    const percentage = totalVotes > 0 ? Math.round((count / totalVotes) * 100) : 0;
+                    const barHtml = `<div class="graph-bar"><div class="graph-label">${name}</div><div class="bar-container"><div class="bar" style="width: ${percentage}%;">${percentage}%</div></div></div>`;
+                    graphContainer.innerHTML += barHtml;
+                });
+            }
+        });
+    </script>
+</body>
+</html>
