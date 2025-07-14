@@ -342,46 +342,42 @@
         });
         
         // --- REVISED AND CORRECTED: Graph Generation Logic ---
-        async function generateGraph() {
-            graphContainer.innerHTML = ''; // Clear previous graph
+       async function generateGraph() {
+            graphContainer.innerHTML = '';
             console.log("--- Starting Graph Generation ---");
 
-            // 1. Get the prediction counts for each contestant
             const predictionsSnapshot = await db.collection('predictions').get();
             let predictionData = {};
             let totalVotes = 0;
 
-            console.log("Fetching individual vote counts...");
+            // This loop reads your database
             predictionsSnapshot.forEach(doc => {
-                const contestantName = doc.id;
-                const voteCount = doc.data().count;
-                predictionData[contestantName] = voteCount;
-                console.log(`> Fetched ${contestantName} with count: ${voteCount}`);
-                
-                // Add this contestant's votes to the total
-                totalVotes += voteCount;
+                predictionData[doc.id] = doc.data().count;
             });
             
-            console.log("------------------------------------");
+            // --- NEW DEBUGGING STEP ---
+            // This will show us the exact data the code is about to use.
+            console.log("Data read from Firestore:");
+            console.table(predictionData);
+
+            // This loop calculates the total based on the data above
+            for (const name in predictionData) {
+                totalVotes += predictionData[name];
+            }
+            
             console.log("Final Total Votes Calculated:", totalVotes);
             console.log("------------------------------------");
 
-            // 2. Sort contestants by their vote count (highest first)
             const sortedContestants = Object.keys(predictionData).sort((a,b) => predictionData[b] - predictionData[a]);
 
-            // 3. Calculate and display the graph
-            console.log("Calculating percentages and building graph...");
             sortedContestants.forEach(name => {
                 const count = predictionData[name];
                 const percentage = totalVotes > 0 ? Math.round((count / totalVotes) * 100) : 0;
-                
-                // Log the calculation for each contestant
                 console.log(`> For ${name}: (${count} / ${totalVotes}) * 100 = ${percentage}%`);
-                
                 const barHtml = `<div class="graph-bar"><div class="graph-label">${name}</div><div class="bar-container"><div class="bar" style="width: ${percentage}%;">${percentage}%</div></div></div>`;
                 graphContainer.innerHTML += barHtml;
             });
-            console.log("--- Graph Generation Complete ---")
+            console.log("--- Graph Generation Complete ---");
         }
     });
 </script>
