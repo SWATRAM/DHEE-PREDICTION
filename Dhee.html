@@ -4,253 +4,123 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>The Predictor's Panel</title>
+    
+    <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-firestore-compat.js"></script>
+
     <style>
-        /* --- Basic Setup --- */
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: #f0f2f5;
-            color: #333;
-            display: flex;
-            justify-content: center;
-            align-items: flex-start;
-            padding: 20px;
-            gap: 30px;
-        }
-
-        /* --- Picture Stack (Left Corner) --- */
-        #picture-stack {
-            width: 150px;
-            height: 600px;
-            border: 2px dashed #b0b0b0;
-            border-radius: 10px;
-            padding: 10px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            background-color: #fff;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.05);
-        }
-
-        /* --- Draggable Picture Cards --- */
-        .picture-card {
-            width: 120px;
-            height: 120px;
-            background-color: #e0e0e0;
-            border: 2px solid #ccc;
-            border-radius: 8px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-weight: bold;
-            font-size: 14px;
-            cursor: grab;
-            user-select: none;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            background-size: cover;
-            background-position: center;
-            color: white;
-            text-shadow: 1px 1px 3px black;
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
-        }
-        
-        /* Make the cards in the stack overlap */
-        #picture-stack .picture-card:not(:first-child) {
-            margin-top: -105px;
-        }
-        
-        .picture-card:hover {
-            transform: scale(1.05);
-            z-index: 10;
-        }
-
-        .picture-card.dragging {
-            cursor: grabbing;
-            opacity: 0.5;
-            box-shadow: 0 8px 16px rgba(0,0,0,0.2);
-        }
-
-        /* --- Game Board (Center) --- */
-        #game-board {
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-            align-items: center;
-        }
-        
-        .grid-container {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 15px;
-            padding: 15px;
-            background-color: #ffffff;
-            border-radius: 10px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-        }
-        
-        h2 {
-            margin: 0;
-            text-align: center;
-            color: #1a237e;
-        }
-
-        /* --- Drop Boxes --- */
-        .drop-box {
-            width: 130px;
-            height: 130px;
-            background-color: #e8eaf6;
-            border: 2px dashed #9fa8da;
-            border-radius: 8px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            position: relative;
-            transition: background-color 0.3s, border-color 0.3s;
-        }
-        
-        .drop-box::before {
-            content: attr(data-rank);
-            position: absolute;
-            top: 5px;
-            left: 8px;
-            font-size: 16px;
-            font-weight: bold;
-            color: #7986cb;
-        }
-
-        /* Highlight effect when dragging over a box */
-        .drop-box.drag-over {
-            background-color: #c5cae9;
-            border-color: #3f51b5;
-        }
-        
-        #lock-button {
-            padding: 12px 25px;
-            font-size: 16px;
-            font-weight: bold;
-            color: white;
-            background-color: #28a745;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: background-color 0.2s;
-            margin-top: 10px;
-        }
-        
-        #lock-button:hover {
-            background-color: #218838;
-        }
-
+        body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background-color:#f0f2f5;color:#333;display:flex;justify-content:center;align-items:flex-start;padding:20px;gap:30px}#picture-stack{width:150px;height:600px;border:2px dashed #b0b0b0;border-radius:10px;padding:10px;display:flex;flex-direction:column;align-items:center;background-color:#fff;box-shadow:0 4px 8px rgba(0,0,0,.05)}.picture-card{width:120px;height:120px;background-color:#e0e0e0;border:2px solid #ccc;border-radius:8px;display:flex;justify-content:center;align-items:center;font-weight:700;font-size:14px;cursor:grab;-webkit-user-select:none;user-select:none;box-shadow:0 2px 4px rgba(0,0,0,.1);background-size:cover;background-position:center;color:#fff;text-shadow:1px 1px 3px #000;transition:transform .2s ease,box-shadow .2s ease}#picture-stack .picture-card:not(:first-child){margin-top:-105px}.picture-card:hover{transform:scale(1.05);z-index:10}.picture-card.dragging{cursor:grabbing;opacity:.5;box-shadow:0 8px 16px rgba(0,0,0,.2)}#game-board{display:flex;flex-direction:column;gap:20px;align-items:center}.grid-container{display:grid;grid-template-columns:repeat(3,1fr);gap:15px;padding:15px;background-color:#fff;border-radius:10px;box-shadow:0 4px 8px rgba(0,0,0,.1)}h2{margin:0;text-align:center;color:#1a237e}.drop-box{width:130px;height:130px;background-color:#e8eaf6;border:2px dashed #9fa8da;border-radius:8px;display:flex;justify-content:center;align-items:center;position:relative;transition:background-color .3s,border-color .3s}.drop-box::before{content:attr(data-rank);position:absolute;top:5px;left:8px;font-size:16px;font-weight:700;color:#7986cb}.drop-box.drag-over{background-color:#c5cae9;border-color:#3f51b5}#lock-button{padding:12px 25px;font-size:16px;font-weight:700;color:#fff;background-color:#28a745;border:none;border-radius:5px;cursor:pointer;transition:background-color .2s;margin-top:10px}#lock-button:hover{background-color:#218838}#results-container{width:100%;max-width:500px;background:#fff;padding:20px;border-radius:10px;box-shadow:0 4px 12px rgba(0,0,0,.1);text-align:center}.graph-bar{display:flex;align-items:center;margin-bottom:10px;font-size:14px}.graph-label{width:80px;text-align:right;padding-right:10px;font-weight:700}.bar-container{flex-grow:1;background-color:#e8eaf6;border-radius:5px;overflow:hidden}.bar{height:25px;background-color:#3f51b5;color:#fff;display:flex;align-items:center;justify-content:flex-end;padding-right:8px;border-radius:5px;font-size:12px;font-weight:700;transition:width .5s ease-in-out}
     </style>
 </head>
 <body>
-
-    <div id="picture-stack" class="drop-zone">
-        </div>
-
+    <div id="picture-stack" class="drop-zone"></div>
     <div id="game-board">
-        <div class="panel">
-            <h2>🏆 Super Six</h2>
-            <div id="super-six" class="grid-container">
-                </div>
-        </div>
-        <div class="panel">
-            <h2>🔻 Bottom Five</h2>
-            <div id="bottom-five" class="grid-container">
-                </div>
+        <div class="panel-container">
+            <div class="panel"><h2>🏆 Super Six</h2><div id="super-six" class="grid-container"></div></div>
+            <div class="panel"><h2>🔻 Bottom Five</h2><div id="bottom-five" class="grid-container"></div></div>
         </div>
         <button id="lock-button">Lock In Predictions</button>
     </div>
+    <div id="results-container" style="display: none;">
+        <h2>Your predictions are locked.</h2><p>Here's how your picks compare to everyone else's!</p><hr>
+        <h3>Super Six Prediction Percentages</h3><div id="graph"></div>
+    </div>
 
     <script>
+        // --- NEW: Firebase Initialization ---
+        // PASTE YOUR FIREBASE CONFIGURATION OBJECT HERE
+        const firebaseConfig = {
+            apiKey: "AIzaSyBuGvHQqkpL_BWiIhDSCZzgBmt2dnvBvoQ",
+            authDomain: "super-6-7857b.firebaseapp.com",
+            projectId: "super-6-7857bD",
+            storageBucket: "super-6-7857b.firebasestorage.app",
+            messagingSenderId: "309012647170",
+            appId: "1:309012647170:web:8c04317b7a6a993c7f461b"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore(); // Get a reference to the Firestore database
+
         document.addEventListener('DOMContentLoaded', () => {
             const pictureStack = document.getElementById('picture-stack');
             const superSixGrid = document.getElementById('super-six');
             const bottomFiveGrid = document.getElementById('bottom-five');
-            
-            // --- REVISED: Now 11 contestants ---
-		const contestants = [
-                'raju', 'abhi', 'pandu', 'jatin', 'jhansi',
-                'janu', 'sushmitha', 'anshu', 'rajnandini', 'bhoomika', 'manikanta'
-            ];            
-            
-            // --- Create and Place Picture Cards ---
+            const lockButton = document.getElementById('lock-button');
+            const gameBoard = document.getElementById('game-board');
+            const resultsContainer = document.getElementById('results-container');
+            const graphContainer = document.getElementById('graph');
+
+            const contestants = ['raju', 'abhi', 'pandu', 'jatin', 'jhansi','janu', 'sushmitha', 'anshu', 'rajnandini', 'bhoomika', 'manikanta''];
+
             contestants.forEach((name, index) => {
                 const card = document.createElement('div');
                 card.id = `contestant-${index}`;
                 card.className = 'picture-card';
                 card.draggable = true;
                 card.innerText = name;
-                //card.style.backgroundImage = `url(https://picsum.photos/seed/${name}/120/120)`;
                 card.style.backgroundImage = `url(${name.toLowerCase()}.jpeg)`;
-		pictureStack.appendChild(card);
+                pictureStack.appendChild(card);
             });
             
-            // --- REVISED: Create 11 Drop Boxes ---
             for(let i = 1; i <= 11; i++) {
                 const box = document.createElement('div');
                 box.className = 'drop-box drop-zone';
-                box.dataset.rank = i; // Set rank number
-                if (i <= 6) {
-                    superSixGrid.appendChild(box);
-                } else {
-                    bottomFiveGrid.appendChild(box);
-                }
+                box.dataset.rank = i;
+                if (i <= 6) { superSixGrid.appendChild(box); } else { bottomFiveGrid.appendChild(box); }
             }
-
-            // --- Drag and Drop Logic (no changes needed here) ---
-            const draggableItems = document.querySelectorAll('.picture-card');
-            const dropZones = document.querySelectorAll('.drop-zone');
             
-            let draggedItem = null;
-            let sourceContainer = null;
-
-            draggableItems.forEach(item => {
-                item.addEventListener('dragstart', (e) => {
-                    draggedItem = e.target;
-                    sourceContainer = e.target.parentElement;
-                    setTimeout(() => {
-                        e.target.classList.add('dragging');
-                    }, 0);
-                });
-
-                item.addEventListener('dragend', (e) => {
-                    e.target.classList.remove('dragging');
-                });
+            let draggedItem = null, sourceContainer = null;
+            document.querySelectorAll('.picture-card').forEach(item => {
+                item.addEventListener('dragstart', e => { draggedItem = e.target; sourceContainer = e.target.parentElement; setTimeout(() => e.target.classList.add('dragging'), 0); });
+                item.addEventListener('dragend', e => e.target.classList.remove('dragging'));
             });
-
-            dropZones.forEach(zone => {
-                zone.addEventListener('dragover', (e) => {
-                    e.preventDefault(); 
-                    zone.classList.add('drag-over');
-                });
-
-                zone.addEventListener('dragleave', () => {
-                    zone.classList.remove('drag-over');
-                });
-
-                zone.addEventListener('drop', (e) => {
-                    e.preventDefault();
-                    zone.classList.remove('drag-over');
-                    
+            document.querySelectorAll('.drop-zone').forEach(zone => {
+                zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
+                zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+                zone.addEventListener('drop', e => {
+                    e.preventDefault(); zone.classList.remove('drag-over');
                     const target = e.target;
-                    
-                    if (target.classList.contains('drop-box') && !target.hasChildNodes()) {
-                        target.appendChild(draggedItem);
-                    } 
-                    else if (target.classList.contains('picture-card')) {
-                        const targetContainer = target.parentElement;
-                        sourceContainer.appendChild(target);
-                        targetContainer.appendChild(draggedItem);
-                    }
-                    else if (target.id === 'picture-stack') {
-                         if (e.target.id === 'picture-stack') {
-                            target.appendChild(draggedItem);
-                         }
-                    }
+                    if (target.classList.contains('drop-box') && !target.hasChildNodes()) target.appendChild(draggedItem);
+                    else if (target.classList.contains('picture-card')) { const tc = target.parentElement; sourceContainer.appendChild(target); tc.appendChild(draggedItem); }
+                    else if (target.id === 'picture-stack' && e.target.id === 'picture-stack') target.appendChild(draggedItem);
                 });
             });
-        });
 
-    </script>
-</body>
-</html>
+            // --- REVISED: Lock In Predictions Logic ---
+            lockButton.addEventListener('click', () => {
+                const superSixPicks = [];
+                superSixGrid.querySelectorAll('.drop-box').forEach(box => {
+                    if (box.firstChild) superSixPicks.push(box.firstChild.innerText);
+                });
+
+                if (superSixPicks.length === 0) { alert("Please make at least one prediction!"); return; }
+
+                // 1. Submit predictions to Firebase
+                superSixPicks.forEach(name => {
+                    const docRef = db.collection('predictions').doc(name);
+                    docRef.update({
+                        count: firebase.firestore.FieldValue.increment(1)
+                    }).catch(() => {
+                        // If the document doesn't exist, create it
+                        docRef.set({ count: 1 });
+                    });
+                });
+                
+                // 2. Disable game and show results
+                document.querySelectorAll('.picture-card').forEach(item => { item.draggable = false; item.style.cursor = 'not-allowed'; });
+                gameBoard.style.display = 'none';
+                pictureStack.style.display = 'none';
+                resultsContainer.style.display = 'block';
+
+                // 3. Generate graph with REAL data from Firebase
+                generateGraph();
+            });
+            
+            // --- REVISED: Graph Generation with REAL Data ---
+            async function generateGraph() {
+                graphContainer.innerHTML = ''; // Clear previous graph
+                const snapshot = await db.collection('predictions').get();
+                
+                let predictionData = {};
+                let total
